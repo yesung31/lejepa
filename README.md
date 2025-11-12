@@ -43,6 +43,48 @@ LeJEPA is a lean, scalable, and theoretically grounded framework for self-superv
 - Distributed training-friendly codebase (~50 lines of core code)
 - State-of-the-art results across 10+ datasets and 60+ architectures
 ---
+
+## GOTO hyperparameters
+
+
+Our data augmentation strategy follows a multi-crop approach inspired by DINO, where we generate multiple views of each image at different scales to encourage the model to learn both global semantic information and local fine-grained features.
+
+### Data augmentation and views
+
+Each training image is augmented to produce **2 global views** and **6 local views** with different spatial scales but the same set of color and geometric transformations:
+| **Global Views** | **Local Views** |
+|------------------|-----------------|
+| **RandomResizedCrop**<br>- Resolution: 224x224<br>- Scale: (0.3, 1.0)<br>- Covers 30-100% of the image | **RandomResizedCrop**<br>- Resolution: 98x98<br>- Scale: (0.05, 0.3)<br>- Covers 5-30% of the image |
+| **RandomHorizontalFlip** (p=0.5) | **RandomHorizontalFlip** (p=0.5) |
+| **ColorJitter** (p=0.8)<br>- Brightness: 0.4<br>- Contrast: 0.4<br>- Saturation: 0.2<br>- Hue: 0.1 | **ColorJitter** (p=0.8)<br>- Brightness: 0.4<br>- Contrast: 0.4<br>- Saturation: 0.2<br>- Hue: 0.1 |
+| **RandomGrayscale** (p=0.2) | **RandomGrayscale** (p=0.2) |
+| **GaussianBlur** (p=0.5) | **GaussianBlur** (p=0.5) |
+| **RandomSolarize** (p=0.2, threshold=128) | **RandomSolarize** (p=0.2, threshold=128) |
+| **Normalization** (mean, std) | **Normalization** (mean, std) |
+
+
+The key difference between global and local views is the **cropping scale**: global views capture larger portions of the image to learn high-level semantics, while local views focus on smaller regions to learn fine-grained local patterns. All other augmentations are applied identically to both view types to ensure consistency in the learned representations.
+### Training Configuration
+We use the **AdamW optimizer** for all models and datasets with the following hyperparameters:
+- **Learning Rate**: `5e-4` (good starting point)
+- **Weight Decay**: 
+  - `5e-2` for Vision Transformers (ViT)
+  - `5e-4` for ResNets
+- **Precision**: All training is performed using **bfloat16 (bf16)** mixed precision
+- **Learning Rate Schedule**: Linear warmup with cosine annealing decay
+  - Final learning rate: `initial_lr / 1000`
+## Linear Probe Evaluation
+For linear probe evaluation, we use the following configuration across all models (ours and baselines):
+- **Feature Extraction**: Concatenation of the **CLS token from the last two layers**
+  - For ViT models without CLS token, we average all patch tokens (standard practice)
+- **Normalization**: We apply **LayerNorm** or **BatchNorm** on the concatenated CLS tokens
+  - Following DINO, we found this improves linear probe performance in some settings
+  - No clear difference observed between LayerNorm and BatchNorm, so we used LayerNorm consistently
+- **Optimizer**: **AdamW** (no significant difference found with SGD)
+- **Weight Decay**: `1e-6` (very small)
+- **Learning Rate Schedule**: Same as pre-training (linear warmup with cosine annealing)
+
+
 ## Installation
 LeJEPA is built on [PyTorch](https://pytorch.org/) and standard scientific Python libraries (e.g., NumPy). For rapid experimentation, we provide a pretraining skeleton script using `stable_pretraining`, a PyTorch Lightning wrapper. The core SIGReg loss can be integrated into any pretraining codebase.
 **Requirements:**
