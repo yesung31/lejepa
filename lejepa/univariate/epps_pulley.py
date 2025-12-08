@@ -99,7 +99,7 @@ class EppsPulley(UnivariateTest):
         return (err @ self.weights) * N * self.world_size
 
 
-class EppsPulley(UnivariateTest):
+class DeprecatedEppsPulley(UnivariateTest):
     """
     PyTorch implementation of the Epps-Pulley test for univariate normality
     based on empirical characteristic function.
