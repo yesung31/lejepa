@@ -148,7 +148,7 @@ def main(cfg: DictConfig):
 
     # modules and loss
     net = ViTEncoder(proj_dim=cfg.proj_dim).to("cuda")
-    probe = nn.Sequential(nn.LayerNorm(512), nn.Linear(512, 100)).to("cuda")
+    probe = nn.Sequential(nn.LayerNorm(512), nn.Linear(512, 10)).to("cuda")
     sigreg = SIGReg().to("cuda")
     # Optimizer and scheduler
     g1 = {"params": net.parameters(), "lr": cfg.lr, "weight_decay": 5e-2}
